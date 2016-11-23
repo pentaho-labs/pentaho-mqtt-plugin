@@ -1,89 +1,85 @@
-package org.pentaho.mqtt;
+/*******************************************************************************
+ *
+ * Pentaho IoT
+ *
+ * Copyright (C) 2016 by Pentaho : http://www.pentaho.com
+ *
+ *******************************************************************************
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ******************************************************************************/
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileReader;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.KeyPair;
-import java.security.KeyStore;
-import java.security.Security;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
+package org.pentaho.mqtt;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
-
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.openssl.PEMDecryptorProvider;
-import org.bouncycastle.openssl.PEMEncryptedKeyPair;
-import org.bouncycastle.openssl.PEMKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
-import org.bouncycastle.openssl.jcajce.JcePEMDecryptorProviderBuilder;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 
 public class SSLSocketFactoryGenerator {
 
-	public static SSLSocketFactory getSocketFactory(String caCrtFile,
-			String crtFile, String keyFile, String password) throws Exception {
+  public static SSLSocketFactory getSocketFactory( String caCrtFile, String crtFile, String keyFile, String password )
+      throws Exception {
 
-		char[] passwordCharArray = password == null ? new char[0] : password
-				.toCharArray();
+    char[] passwordCharArray = password == null ? new char[0] : password.toCharArray();
 
-		Security.addProvider(new BouncyCastleProvider());
-		CertificateFactory cf = CertificateFactory.getInstance("X.509");
+    // Security.addProvider( new BouncyCastleProvider() );
+    CertificateFactory cf = CertificateFactory.getInstance( "X.509" );
 
-		X509Certificate caCert = (X509Certificate) cf
-				.generateCertificate(new ByteArrayInputStream(Files
-						.readAllBytes(Paths.get(caCrtFile))));
+    X509Certificate
+        caCert =
+        (X509Certificate) cf
+            .generateCertificate( new ByteArrayInputStream( Files.readAllBytes( Paths.get( caCrtFile ) ) ) );
 
-		X509Certificate cert = (X509Certificate) cf
-				.generateCertificate(new ByteArrayInputStream(Files
-						.readAllBytes(Paths.get(crtFile))));
+    X509Certificate
+        cert =
+        (X509Certificate) cf
+            .generateCertificate( new ByteArrayInputStream( Files.readAllBytes( Paths.get( crtFile ) ) ) );
 
-		File privateKeyFile = new File(keyFile);
-		PEMParser pemParser = new PEMParser(new FileReader(privateKeyFile));
-		PEMDecryptorProvider decProv = new JcePEMDecryptorProviderBuilder()
-				.build(passwordCharArray);
-		JcaPEMKeyConverter converter = new JcaPEMKeyConverter()
-				.setProvider("BC");
+    File privateKeyFile = new File( keyFile );
 
-		Object object = pemParser.readObject();
-		KeyPair kp;
+    PrivateKey privateKey = PrivateKeyReader.readKey( privateKeyFile );
 
-		if (object instanceof PEMEncryptedKeyPair) {
-			kp = converter.getKeyPair(((PEMEncryptedKeyPair) object)
-					.decryptKeyPair(decProv));
-		} else {
-			kp = converter.getKeyPair((PEMKeyPair) object);
-		}
+    KeyStore caKeyStore = KeyStore.getInstance( KeyStore.getDefaultType() );
+    caKeyStore.load( null, null );
+    caKeyStore.setCertificateEntry( "ca-certificate", caCert );
+    TrustManagerFactory
+        trustManagerFactory =
+        TrustManagerFactory.getInstance( TrustManagerFactory.getDefaultAlgorithm() );
+    trustManagerFactory.init( caKeyStore );
 
-		pemParser.close();
+    KeyStore keyStore = KeyStore.getInstance( KeyStore.getDefaultType() );
+    keyStore.load( null, null );
+    keyStore.setCertificateEntry( "certificate", cert );
+    //keyStore.setKeyEntry( "private-key", kp.getPrivate(), passwordCharArray,
+    keyStore.setKeyEntry( "private-key", privateKey, passwordCharArray, new java.security.cert.Certificate[] { cert } );
+    KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance( KeyManagerFactory.getDefaultAlgorithm() );
+    keyManagerFactory.init( keyStore, passwordCharArray );
 
-		KeyStore caKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-		caKeyStore.load(null, null);
-		caKeyStore.setCertificateEntry("ca-certificate", caCert);
-		TrustManagerFactory trustManagerFactory = TrustManagerFactory
-				.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-		trustManagerFactory.init(caKeyStore);
+    // SSLContext context = SSLContext.getInstance("TLSv1");
+    SSLContext context = SSLContext.getInstance( "TLSv1.2" );
+    context.init( keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null );
 
-		KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-		keyStore.load(null, null);
-		keyStore.setCertificateEntry("certificate", cert);
-		keyStore.setKeyEntry("private-key", kp.getPrivate(), passwordCharArray,
-				new java.security.cert.Certificate[] { cert });
-		KeyManagerFactory keyManagerFactory = KeyManagerFactory
-				.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-		keyManagerFactory.init(keyStore, passwordCharArray);
+    return context.getSocketFactory();
 
-		// SSLContext context = SSLContext.getInstance("TLSv1");
-		SSLContext context = SSLContext.getInstance("TLSv1.2");
-		context.init(keyManagerFactory.getKeyManagers(),
-				trustManagerFactory.getTrustManagers(), null);
-
-		return context.getSocketFactory();
-
-	}
+  }
 }

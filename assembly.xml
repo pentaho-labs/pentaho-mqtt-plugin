@@ -20,8 +20,6 @@
 			<outputDirectory>lib</outputDirectory>
 			<includes>
 				<include>org.eclipse.paho.client.mqttv3-1.1.0.jar</include>
-				<include>bcprov-jdk15on-1.48.jar</include>
-				<include>bcpkix-jdk15on-1.48.jar</include>
 				<include></include>
 			</includes>
 		</fileSet>

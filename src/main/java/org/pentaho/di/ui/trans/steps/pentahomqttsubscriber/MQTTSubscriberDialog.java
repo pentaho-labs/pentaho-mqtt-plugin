@@ -100,6 +100,7 @@ public class MQTTSubscriberDialog extends BaseStepDialog implements StepDialogIn
   private CTabItem m_wTopicsTab;
   private TableView m_wTopicsTable;
   private CCombo m_wTopicMessageTypeCombo;
+  private Button m_wAllowObjectMessages;
 
   public MQTTSubscriberDialog( Shell parent, BaseStepMeta baseStepMeta,
                                TransMeta transMeta, String stepname ) {
@@ -601,6 +602,27 @@ public class MQTTSubscriberDialog extends BaseStepDialog implements StepDialogIn
     m_wTopicMessageTypeCombo.setLayoutData( fd );
     lastControl = m_wTopicMessageTypeCombo;
 
+
+    Label wlAllowObjectMessages = new Label( wTopicsComp, SWT.RIGHT );
+    wlAllowObjectMessages.setText( BaseMessages
+        .getString( org.pentaho.di.trans.steps.pentahomqttpublisher.MQTTPublisherMeta.PKG,
+            "MQTTClientDialog.AllowObjectMessages.Label" ) );
+    props.setLook( wlAllowObjectMessages );
+    fd = new FormData();
+    fd.left = new FormAttachment( 0, 0 );
+    fd.top = new FormAttachment( m_wTopicMessageTypeCombo, margin * 2 );
+    fd.right = new FormAttachment( middle, -margin );
+    wlAllowObjectMessages.setLayoutData( fd );
+
+    m_wAllowObjectMessages = new Button( wTopicsComp, SWT.CHECK );
+    props.setLook( m_wAllowObjectMessages );
+    fd = new FormData();
+    fd.left = new FormAttachment( middle, 0 );
+    fd.top = new FormAttachment( m_wTopicMessageTypeCombo, margin * 2 );
+    fd.right = new FormAttachment( 100, 0 );
+    m_wAllowObjectMessages.setLayoutData( fd );
+    lastControl = m_wAllowObjectMessages;
+
     ColumnInfo[] colinf =
       new ColumnInfo[] {
         new ColumnInfo( "Topic", ColumnInfo.COLUMN_TYPE_TEXT ),
@@ -723,6 +745,8 @@ public class MQTTSubscriberDialog extends BaseStepDialog implements StepDialogIn
       subscriberMeta.setPassword( m_wPassword.getText() );
     }
 
+    subscriberMeta.setAllowReadMessageOfTypeObject( m_wAllowObjectMessages.getSelection() );
+
     subscriberMeta.setSSLCaFile( m_wCAFile.getText() );
     subscriberMeta.setSSLCertFile( m_wCertFile.getText() );
     subscriberMeta.setSSLKeyFile( m_wKeyFile.getText() );
@@ -759,6 +783,8 @@ public class MQTTSubscriberDialog extends BaseStepDialog implements StepDialogIn
 
     m_wUsername.setText( Const.NVL( subscriberMeta.getUsername(), "" ) );
     m_wPassword.setText( Const.NVL( subscriberMeta.getPassword(), "" ) );
+
+    m_wAllowObjectMessages.setSelection( subscriberMeta.getAllowReadMessageOfTypeObject() );
 
     m_wCAFile.setText( Const.NVL( subscriberMeta.getSSLCaFile(), "" ) );
     m_wCertFile.setText( Const.NVL( subscriberMeta.getSSLCertFile(), "" ) );

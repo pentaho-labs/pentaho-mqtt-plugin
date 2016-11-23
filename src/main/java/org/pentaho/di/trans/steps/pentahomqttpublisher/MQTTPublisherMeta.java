@@ -27,6 +27,7 @@ import org.pentaho.di.core.CheckResultInterface;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.database.DatabaseMeta;
+import org.pentaho.di.core.encryption.Encr;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettleXMLException;
 import org.pentaho.di.core.row.RowMetaInterface;
@@ -54,7 +55,7 @@ import java.util.List;
  * @author Michael Spector
  * @author Mark Hall (mhall{[at]}pentaho{[dot]}com)
  */
-@Step( id = "MQTTPublisherMeta", image = "MQTTPublisherIcon.png", name = "MQTT Publisher", description =
+@Step( id = "MQTTPublisherMeta", image = "MQTTPublisherIcon.svg", name = "MQTT Publisher", description =
     "Publish messages to a " + "MQTT broker", categoryDescription = "Output" ) public class MQTTPublisherMeta
     extends BaseStepMeta implements StepMetaInterface {
 
@@ -341,6 +342,9 @@ import java.util.List;
       requiresAuth = Boolean.parseBoolean( XMLHandler.getTagValue( stepnode, "REQUIRES_AUTH" ) );
       username = XMLHandler.getTagValue( stepnode, "USERNAME" );
       password = XMLHandler.getTagValue( stepnode, "PASSWORD" );
+      if ( !Const.isEmpty( password ) ) {
+        password = Encr.decryptPasswordOptionallyEncrypted( password );
+      }
 
       Node sslNode = XMLHandler.getSubNode( stepnode, "SSL" );
       if ( sslNode != null ) {
@@ -385,7 +389,8 @@ import java.util.List;
       retval.append( "    " ).append( XMLHandler.addTagValue( "USERNAME", username ) );
     }
     if ( password != null ) {
-      retval.append( "    " ).append( XMLHandler.addTagValue( "PASSWORD", password ) );
+      retval.append( "    " )
+          .append( XMLHandler.addTagValue( "PASSWORD", Encr.encryptPasswordIfNotUsingVariables( password ) ) );
     }
 
     if ( sslCaFile != null || sslCertFile != null || sslKeyFile != null || sslKeyFilePass != null ) {

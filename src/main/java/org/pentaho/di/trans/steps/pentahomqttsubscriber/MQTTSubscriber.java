@@ -137,6 +137,22 @@ public class MQTTSubscriber extends BaseStep implements StepInterface {
         logError( e.getMessage(), e );
         return false;
       }
+
+      try {
+        ValueMetaInterface
+            messageMeta =
+            ValueMetaFactory.createValueMeta( "Message",
+                ValueMetaFactory.getIdForValueMeta( ( (MQTTSubscriberMeta) smi ).getMessageType() ) );
+        if ( messageMeta.isSerializableType() && !( (MQTTSubscriberMeta) smi ).getAllowReadMessageOfTypeObject() ) {
+          logError( BaseMessages
+              .getString( MQTTPublisherMeta.PKG, "MQTTClientStep.Error.MessageTypeObjectButObjectNotAllowed" ) );
+          return false;
+        }
+      } catch ( KettlePluginException e ) {
+        logError( e.getMessage(), e );
+        return false;
+      }
+
       return true;
     }
 

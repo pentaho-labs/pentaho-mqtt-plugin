@@ -25,6 +25,7 @@ package org.pentaho.di.trans.steps.pentahomqttsubscriber;
 import org.pentaho.di.core.Const;
 import org.pentaho.di.core.annotations.Step;
 import org.pentaho.di.core.database.DatabaseMeta;
+import org.pentaho.di.core.encryption.Encr;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettlePluginException;
 import org.pentaho.di.core.exception.KettleStepException;
@@ -55,7 +56,7 @@ import java.util.List;
  * @author Mark Hall (mhall{[at]}pentaho{[dot]}com)
  * @version $Revision: $
  */
-@Step( id = "MQTTSubscriberMeta", image = "MQTTSubscriberIcon.png", name = "MQTT Subscriber", description =
+@Step( id = "MQTTSubscriberMeta", image = "MQTTSubscriberIcon.svg", name = "MQTT Subscriber", description =
     "Subscribe to topics " + "at an MQTT broker", categoryDescription = "Input" ) public class MQTTSubscriberMeta
     extends BaseStepMeta implements StepMetaInterface {
 
@@ -76,6 +77,11 @@ import java.util.List;
   private String m_sslCertFile;
   private String m_sslKeyFile;
   private String m_sslKeyFilePass;
+
+  /**
+   * Whether to allow messages of type object to be deserialized off the wire
+   */
+  private boolean m_allowReadObjectMessageType;
 
   /**
    * Execute for x seconds (0 means indefinitely)
@@ -286,6 +292,20 @@ import java.util.List;
     return m_executeForDuration;
   }
 
+  /**
+   * @param allow true to allow object messages to be deserialized off of the wire
+   */
+  public void setAllowReadMessageOfTypeObject( boolean allow ) {
+    m_allowReadObjectMessageType = allow;
+  }
+
+  /**
+   * @return true if deserializing object messages is ok
+   */
+  public boolean getAllowReadMessageOfTypeObject() {
+    return m_allowReadObjectMessageType;
+  }
+
   @Override public void setDefault() {
 
   }
@@ -323,9 +343,16 @@ import java.util.List;
     m_qos = XMLHandler.getTagValue( stepnode, "QOS" );
     m_requiresAuth = Boolean.parseBoolean( XMLHandler.getTagValue( stepnode, "REQUIRES_AUTH" ) );
 
-    // TODO encrypt password
     m_username = XMLHandler.getTagValue( stepnode, "USERNAME" );
     m_password = XMLHandler.getTagValue( stepnode, "PASSWORD" );
+    if ( !Const.isEmpty( m_password ) ) {
+      m_password = Encr.decryptPasswordOptionallyEncrypted( m_password );
+    }
+
+    String allowObjects = XMLHandler.getTagValue( stepnode, "READ_OBJECTS" );
+    if ( !Const.isEmpty( allowObjects ) ) {
+      m_allowReadObjectMessageType = Boolean.parseBoolean( allowObjects );
+    }
 
     Node sslNode = XMLHandler.getSubNode( stepnode, "SSL" );
     if ( sslNode != null ) {
@@ -374,8 +401,12 @@ import java.util.List;
       retval.append( "    " ).append( XMLHandler.addTagValue( "USERNAME", m_username ) );
     }
     if ( !Const.isEmpty( m_password ) ) {
-      retval.append( "    " ).append( XMLHandler.addTagValue( "PASSWORD", m_password ) );
+      retval.append( "    " )
+          .append( XMLHandler.addTagValue( "PASSWORD", Encr.encryptPasswordIfNotUsingVariables( m_password ) ) );
     }
+
+    retval.append( "    " )
+        .append( XMLHandler.addTagValue( "READ_OBJECTS", Boolean.toString( m_allowReadObjectMessageType ) ) );
 
     if ( !Const.isEmpty( m_sslCaFile ) || !Const.isEmpty( m_sslCertFile ) || !Const.isEmpty( m_sslKeyFile ) || !Const
         .isEmpty( m_sslKeyFilePass ) ) {
@@ -421,6 +452,7 @@ import java.util.List;
     m_requiresAuth = Boolean.parseBoolean( rep.getStepAttributeString( stepId, "REQUIRES_AUTH" ) );
     m_username = rep.getStepAttributeString( stepId, "USERNAME" );
     m_password = rep.getStepAttributeString( stepId, "PASSWORD" );
+    m_allowReadObjectMessageType = Boolean.parseBoolean( rep.getStepAttributeString( stepId, "READ_OBJECTS" ) );
 
     m_sslCaFile = rep.getStepAttributeString( stepId, "SSL_CA_FILE" );
     m_sslCertFile = rep.getStepAttributeString( stepId, "SSL_CERT_FILE" );
@@ -465,6 +497,8 @@ import java.util.List;
     if ( !Const.isEmpty( m_password ) ) {
       rep.saveStepAttribute( transformationId, stepId, "PASSWORD", m_password );
     }
+
+    rep.saveStepAttribute( transformationId, stepId, "READ_OBJECTS", Boolean.toString( m_allowReadObjectMessageType ) );
 
     if ( !Const.isEmpty( m_sslCaFile ) ) {
       rep.saveStepAttribute( transformationId, stepId, "SSL_CA_FILE", m_sslCaFile );

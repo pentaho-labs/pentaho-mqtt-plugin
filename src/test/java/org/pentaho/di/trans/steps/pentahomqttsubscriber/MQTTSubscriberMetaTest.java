@@ -24,10 +24,14 @@ package org.pentaho.di.trans.steps.pentahomqttsubscriber;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.pentaho.di.core.Const;
+import org.pentaho.di.core.encryption.Encr;
+import org.pentaho.di.core.encryption.TwoWayPasswordEncoderPluginType;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettlePluginException;
 import org.pentaho.di.core.plugins.PluginRegistry;
 import org.pentaho.di.core.row.value.ValueMetaPluginType;
+import org.pentaho.di.core.util.EnvUtil;
 import org.pentaho.di.trans.steps.loadsave.LoadSaveTester;
 import org.pentaho.di.trans.steps.loadsave.validator.FieldLoadSaveValidator;
 import org.pentaho.di.trans.steps.loadsave.validator.FieldLoadSaveValidatorFactory;
@@ -38,19 +42,25 @@ import java.util.Map;
 
 public class MQTTSubscriberMetaTest {
 
-  @BeforeClass public static void beforeClass() throws KettlePluginException {
+  @BeforeClass public static void beforeClass() throws KettleException {
+    PluginRegistry.addPluginType( TwoWayPasswordEncoderPluginType.getInstance() );
     PluginRegistry.addPluginType( ValueMetaPluginType.getInstance() );
     PluginRegistry.init();
+    String
+        passwordEncoderPluginID =
+        Const.NVL( EnvUtil.getSystemProperty( Const.KETTLE_PASSWORD_ENCODER_PLUGIN ), "Kettle" );
+    Encr.init( passwordEncoderPluginID );
   }
 
-  @SuppressWarnings( "unchecked" )
-  @Test public void testRoundTrips() throws KettleException, NoSuchMethodException, SecurityException {
+  @SuppressWarnings( "unchecked" ) @Test public void testRoundTrips()
+      throws KettleException, NoSuchMethodException, SecurityException {
     Map<String, String> getterMap = new HashMap<String, String>();
     getterMap.put( "CA_FILE", "getSSLCaFile" );
     getterMap.put( "CERT_FILE", "getSSLCertFile" );
     getterMap.put( "KEY_FILE", "getSSLKeyFile" );
     getterMap.put( "KEY_FILE_PASS", "getSSLKeyFilePass" );
     getterMap.put( "KEEP_ALIVE", "getKeepAliveInterval" );
+    getterMap.put( "READ_OBJECTS", "getAllowReadMessageOfTypeObject" );
 
     Map<String, String> setterMap = new HashMap<String, String>();
     setterMap.put( "CA_FILE", "setSSLCaFile" );
@@ -58,6 +68,7 @@ public class MQTTSubscriberMetaTest {
     setterMap.put( "KEY_FILE", "setSSLKeyFile" );
     setterMap.put( "KEY_FILE_PASS", "setSSLKeyFilePass" );
     setterMap.put( "KEEP_ALIVE", "setKeepAliveInterval" );
+    getterMap.put( "READ_OBJECTS", "setAllowReadMessageOfTypeObject" );
 
     Map<String, FieldLoadSaveValidator<?>> fieldLoadSaveValidatorAttributeMap = new HashMap<>();
     Map<String, FieldLoadSaveValidator<?>>

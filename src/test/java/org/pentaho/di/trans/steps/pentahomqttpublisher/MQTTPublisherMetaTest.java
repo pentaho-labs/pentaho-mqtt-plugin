@@ -24,10 +24,14 @@ package org.pentaho.di.trans.steps.pentahomqttpublisher;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.pentaho.di.core.Const;
+import org.pentaho.di.core.encryption.Encr;
+import org.pentaho.di.core.encryption.TwoWayPasswordEncoderPluginType;
 import org.pentaho.di.core.exception.KettleException;
 import org.pentaho.di.core.exception.KettlePluginException;
 import org.pentaho.di.core.plugins.PluginRegistry;
 import org.pentaho.di.core.row.value.ValueMetaPluginType;
+import org.pentaho.di.core.util.EnvUtil;
 import org.pentaho.di.trans.steps.loadsave.LoadSaveTester;
 import org.pentaho.di.trans.steps.loadsave.validator.FieldLoadSaveValidator;
 
@@ -37,9 +41,12 @@ import java.util.Map;
 
 public class MQTTPublisherMetaTest {
 
-  @BeforeClass public static void beforeClass() throws KettlePluginException {
+  @BeforeClass public static void beforeClass() throws KettleException {
+    PluginRegistry.addPluginType( TwoWayPasswordEncoderPluginType.getInstance() );
     PluginRegistry.addPluginType( ValueMetaPluginType.getInstance() );
     PluginRegistry.init();
+    String passwordEncoderPluginID = Const.NVL( EnvUtil.getSystemProperty( Const.KETTLE_PASSWORD_ENCODER_PLUGIN ), "Kettle" );
+    Encr.init( passwordEncoderPluginID );
   }
 
   @SuppressWarnings( "unchecked" )
